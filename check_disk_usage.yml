@@ -1,0 +1,32 @@
+---
+- name: Check critical locations to disk usages is below 80%
+  hosts: con01.blue.ssp.navy.mil
+  gather_facts: true
+
+  tasks:
+  - name: initialize low_space_mounts
+    set_fact:
+      low_space_mounts: []
+
+  - name: append mount when under 20%
+    set_fact:
+      low_space_mounts: "{{ low_space_mounts + [ item ] }}"
+    loop: "{{ ansible_mounts }}"
+    when : >
+      item.mount in ['/'. '/opt'] and
+      (item.size_available is defined) and
+      (item.size_total is defined) and
+      ((item.size_available | int) < ((item.size_total | int) * 0.2 ))
+
+  # This is meant to debug only if server is under 20%
+  - name: assert no critical low-space mounts exist
+    assert:
+      that:
+        - "low_space_mounts | length == 0"
+    register: disk_assert
+    ignore_errors: yes
+
+  - name: print hostname and offending mounts
+    debug:
+      msg: "Host {{ inventory_hostname }} low space on: {{ low_space_mounts | map(attribute='mount') | join(', ') }}"
+    when: disk_assert is failed
