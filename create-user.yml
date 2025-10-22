@@ -1,0 +1,21 @@
+---
+- name: create my user on a remote machine, lock the password, add my pub
+  hosts:
+  become: yes
+
+  tasks:
+  - name: creating my user
+      user:
+        name: aembrey
+        password: "!"
+        shell: /bin/bash
+        create_home: true
+        groups: wheel
+        append: true
+        state: present
+
+  - name: copy my pub key
+    authorized_key:
+      user: aembrey
+      state: present
+      key: "{{ lookup('file', '/home/aembrey/.ssh/id_rsa.pub') }}"
