@@ -1,0 +1,17 @@
+---
+- name: check installed packages
+  hosts:
+  gather_facts: false
+
+  tasks:
+  - name: get rpm facts
+    package_facts:
+      manager: "auto" # rhel environment I can just put dnf, might work faster
+
+  - name: dump list of packages
+    debug:
+      msg: "{{ ansible_facts.packages.keys() | list }}"
+
+# Using package key dumped from previous command, fill in <packagekey> with name. 
+#  - name: show package version
+#    debug: var=ansible_facts.packages.<packagekey>[0].version
