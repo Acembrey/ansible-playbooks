@@ -1,0 +1,51 @@
+---
+- hosts: servers
+  gather_facts: true
+  become: true
+  become_method: runas
+  become_user: "{{ ansible_user }}"
+  vars:
+    - software_path:
+    - installer_storage:
+    - pkg_source:
+    - args: 
+
+  tasks:
+    - name: Check for previous installation
+      win_stat:
+        path: "{{ software_path }}"
+        checksum_algorithm: sha256
+      register: software_check
+
+    - name: End if product is not installed
+      when: software_check.stat.exists == true
+      fail:
+        msg: "Product is already installed"
+
+    - name: Create temporary folder for install
+      win_file:
+        path: "{{ installer_storage }}"
+        state: directory
+
+    - name: Copy installer to temp folder
+      win_copy:
+        dest: "{{ installer_storage }}"
+        src: "{{ pkg_source }}"
+        remote_src: true
+      register: copy_results
+
+    - name: Enable install mode
+      win_shell: change user /install
+      failed_when: "'FAILED' in install_mode.stderr"
+      register: install_mode
+
+    - name: Install product
+      win_shell: '& "{{ copy_results.dest }}" {{ args }}"'
+      register: install_result
+
+    - name: Enable execute mode
+      win_shell: change user /execute
+      failed_when: "'FAILED' in execute_mode.stderr"
+      register: execute_mode
+
+    
